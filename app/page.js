@@ -3,24 +3,30 @@ import { useState } from "react";
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
-  const [response, setResponse] = useState("");
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     if (!userInput) return;
     setLoading(true);
-    setResponse("");
+
+    // Build the new full array BEFORE sending
+    const newMessages = [...messages, { role: "user", content: userInput }];
+    setMessages(newMessages);
+    setUserInput("");  // clear the input box right away
 
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userInput }),
+      body: JSON.stringify({ messages: newMessages }),  // send the array, not userInput
     });
 
     const data = await res.json();
-    setResponse(data.reply);
+    
+    // Add Claude's reply to the array
+    setMessages([...newMessages, { role: "assistant", content: data.reply }]);
     setLoading(false);
-  }
+}
 
   return (
     <main style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto" }}>
@@ -36,7 +42,12 @@ export default function Home() {
         Send
       </button>
       <div style={{ marginTop: "1.5rem" }}>
-        {loading ? <p>Thinking...</p> : <p>{response}</p>}
+        {messages.map((msg, index) => (
+          <div key={index} style={{ marginBottom: "1rem" }}>
+            <strong>{msg.role === "user" ? "You" : "Claude"}:</strong> {msg.content}
+          </div>
+        ))}
+        {loading && <p>Thinking...</p>}
       </div>
     </main>
   );
