@@ -8,17 +8,12 @@ export async function POST(request) {
   try {
     const { messages } = await request.json();
 
-    const stream = await client.messages.stream({
+    const stream = await client.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 1000,
-      system: `You are a medical term explainer. When the 
-      user gives you a medical term or condition, explain it 
-      simply — like you're talking to regular person. 
-      Use everyday comparisons and plain language. Never use 
-      medical jargon without immediately explaining it in 
-      simple terms. Be warm and clear. keep responses short
-      and concise/brief 1-2 sentences`,
-      messages: messages,
+      messages : messages,
+      system: `You are a medical term explainer. When the user gives you a medical term or condition, respond ONLY with a JSON object in this exact format, no other text, no markdown, no backticks:
+        {"term": "the medical term","simple_explanation": "explanation in plain language","analogy": "an everyday comparison","key_facts": ["fact 1", "fact 2", "fact 3"]}`,
     });
 
     const readable = new ReadableStream({
