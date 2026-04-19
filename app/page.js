@@ -5,27 +5,43 @@ export default function Home() {
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  
   async function handleSubmit() {
     if (!userInput) return;
     setLoading(true);
 
-    // Build the new full array BEFORE sending
     const newMessages = [...messages, { role: "user", content: userInput }];
     setMessages(newMessages);
-    setUserInput("");  // clear the input box right away
+    setUserInput("");
+
+    // Add empty assistant message that we'll fill in as chunks arrive
+    setMessages([...newMessages, { role: "assistant", content: "" }]);
+    setLoading(false);
 
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: newMessages }),  // send the array, not userInput
+      body: JSON.stringify({ messages: newMessages }),
     });
 
-    const data = await res.json();
-    
-    // Add Claude's reply to the array
-    setMessages([...newMessages, { role: "assistant", content: data.reply }]);
-    setLoading(false);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: updated[updated.length - 1].content + chunk,
+        };
+        return updated;
+      });
+    }
 }
 
   return (
